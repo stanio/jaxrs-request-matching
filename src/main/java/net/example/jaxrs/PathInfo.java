@@ -135,6 +135,7 @@ public abstract class PathInfo {
             pathMatcher.set(matcher);
             return matcher;
         }
+        assert matcher.pattern() == pathPattern;
         return matcher.reset(input);
     }
 

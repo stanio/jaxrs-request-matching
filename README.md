@@ -14,6 +14,14 @@ Matching algorithm implementations:
     -   `RequestMatchingEnhanced`
 -   `MatchInfo` –  The result from `RequestMatching.find(path)`.
 
+_Implementation note_
+
+Currently `PathInfo` and the `RequestMatching` implementations maintain some
+`ThreadLocal` resources.  It could be made so `RequestMatching` instances are
+maintained in a `ThreadLocal`, instead.  The `RequestMatching` instance could
+maintain its own (non-thread-safe) `Map` of `(PathInfo, Matcher)` pairs, so
+this package-private detail gets removed from the `PathInfo` implementation.
+
 
 #### `net.example.jaxrs.rest`
 
