@@ -1,4 +1,15 @@
-#### `net.example.jaxrs`
+# JAX-RS Request Matching experiment
+
+Related to eclipse-ee4j/jaxrs-api#904, this is a small experiment trying to compare
+practical performance between spec-compliant reference implementation and a suggested
+"enhanced" implementation.  See:
+
+-   [_JAX-RS 2.1 specification – § 3.7.2 Request Matching_](https://download.oracle.com/otn-pub/jcp/jaxrs-2_1-final-eval-spec/jaxrs-2_1-final-spec.pdf)
+
+[eclipse-ee4j/jaxrs-api#904]: https://github.com/eclipse-ee4j/jaxrs-api/issues/904 "[spec] Matching Requests to Resource Methods – Fails to match some straightforward case"
+
+
+## `net.example.jaxrs`
 
 These build a registry of available resource classes and methods:
 
@@ -14,7 +25,7 @@ Matching algorithm implementations:
     -   `RequestMatchingEnhanced`
 -   `MatchInfo` –  The result from `RequestMatching.find(path)`.
 
-_Implementation note_
+### Implementation note
 
 Currently `PathInfo` and the `RequestMatching` implementations maintain some
 `ThreadLocal` resources.  It could be made so `RequestMatching` instances are
@@ -23,7 +34,7 @@ maintain its own (non-thread-safe) `Map` of `(PathInfo, Matcher)` pairs, so
 this package-private detail gets removed from the `PathInfo` implementation.
 
 
-#### `net.example.jaxrs.rest`
+## `net.example.jaxrs.rest`
 
 Sample resource classes:
 
@@ -36,6 +47,6 @@ Sample resource classes:
 -   `UnmatchedResource`
 
 
-#### `net.example.jaxrs.benchmark`
+## `net.example.jaxrs.benchmark`
 
 Sample benchmark.

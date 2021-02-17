@@ -1,0 +1,4 @@
+# Public Domain
+
+_This module, both source code and documentation, is in the Public Domain, and
+comes with **NO WARRANTY**._
