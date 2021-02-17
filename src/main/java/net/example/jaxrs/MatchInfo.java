@@ -12,14 +12,18 @@ import java.util.regex.Matcher;
 public final class MatchInfo<P extends PathInfo> implements Comparable<MatchInfo<?>> {
 
     public static final Comparator<MatchInfo<?>> FULL_PATH = (o1, o2) -> {
-        int num1 = o1.getLiteralCharacterCount();
-        int num2 = o2.getLiteralCharacterCount();
+        int num1 = o2.getDepth();
+        int num2 = o1.getDepth();
         if (num1 == num2) {
-            num1 = o1.getCapturingGroupCount();
-            num2 = o2.getCapturingGroupCount();
+            num1 = o1.getLiteralCharacterCount();
+            num2 = o2.getLiteralCharacterCount();
             if (num1 == num2) {
-                num1 = o1.getNonDefaultGroupCount();
-                num2 = o2.getNonDefaultGroupCount();
+                num1 = o1.getCapturingGroupCount();
+                num2 = o2.getCapturingGroupCount();
+                if (num1 == num2) {
+                    num1 = o1.getNonDefaultGroupCount();
+                    num2 = o2.getNonDefaultGroupCount();
+                }
             }
         }
         return num2 - num1; // descending order
@@ -47,6 +51,16 @@ public final class MatchInfo<P extends PathInfo> implements Comparable<MatchInfo
 
     static <T extends PathInfo> MatchInfo<T> of(T info, Matcher matcher) {
         return of(info, matcher, null);
+    }
+
+    int getDepth() {
+        int depth = 0;
+        MatchInfo<?> current = parent;
+        while (current != null) {
+            depth += 1;
+            current = current.parent;
+        }
+        return depth;
     }
 
     int getLiteralCharacterCount() {
