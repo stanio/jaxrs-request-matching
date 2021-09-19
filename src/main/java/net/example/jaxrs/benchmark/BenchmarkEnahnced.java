@@ -2,16 +2,14 @@ package net.example.jaxrs.benchmark;
 
 import java.util.concurrent.TimeUnit;
 
+import net.example.jaxrs.RequestMatching;
 import net.example.jaxrs.RequestMatchingEnhanced;
 
 public class BenchmarkEnahnced extends RequestMatchingBenchmark {
 
-    public BenchmarkEnahnced() {
-        super(createRegistry());
-    }
-
-    static RequestMatchingEnhanced createRegistry() {
-        return (RequestMatchingEnhanced) RequestMatchingEnhanced.of(simpleResources);
+    @Override
+    protected RequestMatching createRequestMatcher() {
+        return RequestMatchingEnhanced.of(simpleResources);
     }
 
     public static void main(String[] args) throws Exception {

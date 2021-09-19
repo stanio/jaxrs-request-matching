@@ -9,7 +9,7 @@ import net.example.jaxrs.rest.BarResource;
 import net.example.jaxrs.rest.FooResource;
 import net.example.jaxrs.rest.UnmatchedResource;
 
-public class RequestMatchingBenchmark {
+public abstract class RequestMatchingBenchmark {
 
     static Class<?>[] simpleResources = { FooResource.class,
                                           BarResource.class,
@@ -18,11 +18,9 @@ public class RequestMatchingBenchmark {
 
     volatile int count = 0;
 
-    private final RequestMatching requestMatching;
+    private final ThreadLocal<RequestMatching> requestMatchingLocal = new ThreadLocal<>();
 
-    public RequestMatchingBenchmark(RequestMatching requestMatching) {
-        this.requestMatching = requestMatching;
-    }
+    protected abstract RequestMatching createRequestMatcher();
 
     public void run(long duration, TimeUnit timeUnit) throws Exception {
         Thread throughput = new Thread(() -> {
@@ -55,6 +53,11 @@ public class RequestMatchingBenchmark {
     }
 
     void tryPath(String path) {
+        RequestMatching requestMatching = requestMatchingLocal.get();
+        if (requestMatching == null) {
+            requestMatching = createRequestMatcher();
+            requestMatchingLocal.set(requestMatching);
+        }
         MatchInfo<MethodInfo> method = requestMatching.find(path);
         if (method == null) throw new RuntimeException(path + " not found");
     }

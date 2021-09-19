@@ -5,16 +5,20 @@ import static net.example.jaxrs.MatchInfo.finalCapture;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 
 public class RequestMatchingSpec implements RequestMatching {
 
     private final List<ResourceInfo> rootResources;
 
-    private final ThreadLocal<List<MatchInfo<ResourceInfo>>> candidateRoots = new ThreadLocal<>();
-    private final ThreadLocal<List<MatchInfo<MethodInfo>>> candidateMethodList = new ThreadLocal<>();
-    private final ThreadLocal<List<MatchInfo<ResourceInfo>>> subLocatorList = new ThreadLocal<>();
+    private final List<MatchInfo<ResourceInfo>> candidateRoots = new ArrayList<>();
+    private final List<MatchInfo<MethodInfo>> candidateMethods = new ArrayList<>();
+    private final List<MatchInfo<ResourceInfo>> subLocatorList = new ArrayList<>();
+
+    private final Map<PathInfo, Matcher> pathMatchers = new HashMap<>();
 
     RequestMatchingSpec(ResourceInfo... rootResources) {
         this.rootResources = new ArrayList<>(Arrays.asList(rootResources));
@@ -24,35 +28,24 @@ public class RequestMatchingSpec implements RequestMatching {
         return new RequestMatchingSpec(Introspector.infosFor(rootResources));
     }
 
+    private Matcher resetMatcher(PathInfo info, String path) {
+        return pathMatchers.computeIfAbsent(info, k -> k.getPattern().matcher("")).reset(path);
+    }
+
     private List<MatchInfo<ResourceInfo>> resetCandidateRoots() {
-        List<MatchInfo<ResourceInfo>> list = candidateRoots.get();
-        if (list == null) {
-            list = new ArrayList<>();
-            candidateRoots.set(list);
-            return list;
-        }
+        List<MatchInfo<ResourceInfo>> list = candidateRoots;
         list.clear();
         return list;
     }
 
     private List<MatchInfo<MethodInfo>> resetCandidateMethods() {
-        List<MatchInfo<MethodInfo>> list = candidateMethodList.get();
-        if (list == null) {
-            list = new ArrayList<>();
-            candidateMethodList.set(list);
-            return list;
-        }
+        List<MatchInfo<MethodInfo>> list = candidateMethods;
         list.clear();
         return list;
     }
 
     private List<MatchInfo<ResourceInfo>> resetSubResourceLocators() {
-        List<MatchInfo<ResourceInfo>> list = subLocatorList.get();
-        if (list == null) {
-            list = new ArrayList<>(1);
-            subLocatorList.set(list);
-            return list;
-        }
+        List<MatchInfo<ResourceInfo>> list = subLocatorList;
         list.clear();
         return list;
     }
@@ -66,7 +59,7 @@ public class RequestMatchingSpec implements RequestMatching {
 
         // 1.b, 1.c
         rootResources.forEach(resourceInfo -> {
-            Matcher pathMatcher = resourceInfo.getMatcher(path);
+            Matcher pathMatcher = resetMatcher(resourceInfo, path);
             if (!pathMatcher.matches())
                 return;
 
@@ -109,16 +102,15 @@ public class RequestMatchingSpec implements RequestMatching {
 
         // 2.b
         List<MatchInfo<MethodInfo>> resourceMethods = resetCandidateMethods();
-        findStep2x(matchedResources, subPath, resourceMethods, resetSubResourceLocators());
+        findStep2x(matchedResources, subPath, resetSubResourceLocators());
         return resourceMethods;
     }
 
     /*
      * Find some matching methods in depth
      */
-    private static void findStep2x(List<MatchInfo<ResourceInfo>> matchedResources,
+    private void findStep2x(List<MatchInfo<ResourceInfo>> matchedResources,
                                    String subPath,
-                                   List<MatchInfo<MethodInfo>> candidateMethods,
                                    List<MatchInfo<ResourceInfo>> subResourceLocators) {
         // 2.a
         if (PathInfo.isEmpty(subPath)) {
@@ -133,7 +125,7 @@ public class RequestMatchingSpec implements RequestMatching {
         // 2.c, 2.d
         matchedResources.forEach(parentMatch -> {
             parentMatch.pathInfo.getSubResourceMethodsAndLocators().forEach(subPathInfo -> {
-                Matcher pathMatcher = subPathInfo.getMatcher(subPath);
+                Matcher pathMatcher = resetMatcher(subPathInfo, subPath);
                 if (pathMatcher.matches()) {
                     if (subPathInfo instanceof MethodInfo) {
                         assert PathInfo.isEmpty(finalCapture(pathMatcher));
@@ -167,7 +159,7 @@ public class RequestMatchingSpec implements RequestMatching {
 
         // 2.j
         matchedResources.clear(); // reuse previous matches for next level matches
-        findStep2x(subResourceLocators, subLocator.finalCapture(), candidateMethods, matchedResources);
+        findStep2x(subResourceLocators, subLocator.finalCapture(), matchedResources);
     }
 
     private MatchInfo<MethodInfo> findStep3(List<MatchInfo<MethodInfo>> candidateMethods, String httpMethod) {
