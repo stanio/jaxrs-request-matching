@@ -9,6 +9,8 @@ import java.util.regex.Pattern;
 
 public abstract class PathInfo {
 
+    public static final MatchResult NO_MATCH = Pattern.compile("").matcher("").toMatchResult();
+
     private static final Pattern PATH_VARIABLE = Pattern.compile("(?x) \\{ (.+?) (?: : (.*?) )? \\}");
 
     final MatchResult emptyMatch;
@@ -21,10 +23,13 @@ public abstract class PathInfo {
     private final int literalCharacterCount;
     private final int capturingGroupCount;
     private final int nonDefaultGroupCount;
+    private final boolean terminal;
 
     private ResourceInfo parent;
 
     protected PathInfo(String pathTemplate, boolean terminal) {
+        this.terminal = terminal;
+
         // REVISIT: We may actually try to match "" and "/" against the pathTemplate,
         // after escaping {...} placeholders.  It is unclear whether a placeholder
         // {foo:(|/)} (matches "" or "/") should be considered an "empty" path.
@@ -128,7 +133,7 @@ public abstract class PathInfo {
     /*
      * IMPORTANT: Do not modify Matcher's pattern.
      */
-    Matcher getMatcher(String input) {
+    private Matcher getMatcher(String input) {
         Matcher matcher = pathMatcher.get();
         if (matcher == null) {
             matcher = pathPattern.matcher(input);
@@ -137,6 +142,22 @@ public abstract class PathInfo {
         }
         assert matcher.pattern() == pathPattern;
         return matcher.reset(input);
+    }
+
+    public MatchResult match(String segment) {
+        if (capturingGroupCount > 0) {
+            Matcher m = getMatcher(segment);
+            return m.matches() ? m.toMatchResult() : NO_MATCH;
+        }
+        return simpleMatch(segment) ? new SimpleMatchResult(rmatchPattern, segment)
+                                    : NO_MATCH;
+    }
+
+    private boolean simpleMatch(String segment) {
+        return segment.startsWith(rmatchPattern)
+                && (segment.length() == rmatchPattern.length()
+                        || segment.charAt(rmatchPattern.length()) == '/'
+                        && (!terminal || segment.length() == rmatchPattern.length() + 1));
     }
 
     /**

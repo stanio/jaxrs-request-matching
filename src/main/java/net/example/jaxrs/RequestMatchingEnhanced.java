@@ -5,10 +5,8 @@ import static net.example.jaxrs.MatchInfo.finalCapture;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
+import java.util.regex.MatchResult;
 
 public class RequestMatchingEnhanced implements RequestMatching {
 
@@ -18,18 +16,12 @@ public class RequestMatchingEnhanced implements RequestMatching {
     private final List<MatchInfo<MethodInfo>> candidateMethods = new ArrayList<>();
     private final List<MatchInfo<ResourceInfo>> subLocatorList = new ArrayList<>();
 
-    private final Map<PathInfo, Matcher> pathMatchers = new HashMap<>();
-
     RequestMatchingEnhanced(ResourceInfo... rootResources) {
         this.rootResources = new ArrayList<>(Arrays.asList(rootResources));
     }
 
     public static RequestMatching of(Class<?>... rootResources) {
         return new RequestMatchingEnhanced(Introspector.infosFor(rootResources));
-    }
-
-    private Matcher resetMatcher(PathInfo info, String path) {
-        return pathMatchers.computeIfAbsent(info, k -> k.getPattern().matcher("")).reset(path);
     }
 
     private List<MatchInfo<ResourceInfo>> resetCandidateRoots() {
@@ -59,14 +51,14 @@ public class RequestMatchingEnhanced implements RequestMatching {
 
         // 1.b, 1.c
         rootResources.forEach(resourceInfo -> {
-            Matcher pathMatcher = resetMatcher(resourceInfo, path);
-            if (!pathMatcher.matches())
+            MatchResult pathMatch = resourceInfo.match(path);
+            if (pathMatch == PathInfo.NO_MATCH)
                 return;
 
-            String finalCapture = finalCapture(pathMatcher);
+            String finalCapture = finalCapture(pathMatch);
             if (PathInfo.isEmpty(finalCapture)
                     || resourceInfo.hasSubResourceMethodsOrLocators()) {
-                matchedRoots.add(MatchInfo.of(resourceInfo, pathMatcher));
+                matchedRoots.add(MatchInfo.of(resourceInfo, pathMatch));
             }
         });
 
@@ -123,8 +115,8 @@ public class RequestMatchingEnhanced implements RequestMatching {
             }
 
             parentMatch.pathInfo.getSubResourceMethodsAndLocators().forEach(subPathInfo -> {
-                Matcher pathMatcher = resetMatcher(subPathInfo, subPath);
-                if (pathMatcher.matches()) {
+                MatchResult pathMatcher = subPathInfo.match(subPath);
+                if (pathMatcher != PathInfo.NO_MATCH) {
                     if (subPathInfo instanceof MethodInfo) {
                         candidateMethods.add(MatchInfo
                                 .of((MethodInfo) subPathInfo, pathMatcher, parentMatch));

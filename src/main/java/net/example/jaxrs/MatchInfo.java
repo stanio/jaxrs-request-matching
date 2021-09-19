@@ -2,7 +2,6 @@ package net.example.jaxrs;
 
 import java.util.Comparator;
 import java.util.regex.MatchResult;
-import java.util.regex.Matcher;
 
 /*
  * 3.7.2 Request Matching
@@ -41,16 +40,16 @@ public final class MatchInfo<P extends PathInfo> implements Comparable<MatchInfo
         this.parent = parent;
     }
 
-    static <T extends PathInfo> MatchInfo<T> of(T info, Matcher matcher, MatchInfo<ResourceInfo> parent) {
-        return new MatchInfo<>(info, matcher.toMatchResult(), parent);
+    static <T extends PathInfo> MatchInfo<T> of(T info, MatchResult matchResult, MatchInfo<ResourceInfo> parent) {
+        return new MatchInfo<>(info, matchResult, parent);
     }
 
     static <T extends PathInfo> MatchInfo<T> of(T info, MatchInfo<ResourceInfo> parent) {
         return new MatchInfo<>(info, info.emptyMatch, parent);
     }
 
-    static <T extends PathInfo> MatchInfo<T> of(T info, Matcher matcher) {
-        return of(info, matcher, null);
+    static <T extends PathInfo> MatchInfo<T> of(T info, MatchResult matchResult) {
+        return of(info, matchResult, null);
     }
 
     int getDepth() {

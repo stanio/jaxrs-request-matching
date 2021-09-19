@@ -5,10 +5,8 @@ import static net.example.jaxrs.MatchInfo.finalCapture;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
+import java.util.regex.MatchResult;
 
 public class RequestMatchingSpec implements RequestMatching {
 
@@ -18,18 +16,12 @@ public class RequestMatchingSpec implements RequestMatching {
     private final List<MatchInfo<MethodInfo>> candidateMethods = new ArrayList<>();
     private final List<MatchInfo<ResourceInfo>> subLocatorList = new ArrayList<>();
 
-    private final Map<PathInfo, Matcher> pathMatchers = new HashMap<>();
-
     RequestMatchingSpec(ResourceInfo... rootResources) {
         this.rootResources = new ArrayList<>(Arrays.asList(rootResources));
     }
 
     public static RequestMatching of(Class<?>... rootResources) {
         return new RequestMatchingSpec(Introspector.infosFor(rootResources));
-    }
-
-    private Matcher resetMatcher(PathInfo info, String path) {
-        return pathMatchers.computeIfAbsent(info, k -> k.getPattern().matcher("")).reset(path);
     }
 
     private List<MatchInfo<ResourceInfo>> resetCandidateRoots() {
@@ -59,14 +51,14 @@ public class RequestMatchingSpec implements RequestMatching {
 
         // 1.b, 1.c
         rootResources.forEach(resourceInfo -> {
-            Matcher pathMatcher = resetMatcher(resourceInfo, path);
-            if (!pathMatcher.matches())
+            MatchResult pathMatch = resourceInfo.match(path);
+            if (pathMatch == PathInfo.NO_MATCH)
                 return;
 
-            String finalCapture = finalCapture(pathMatcher);
+            String finalCapture = finalCapture(pathMatch);
             if (PathInfo.isEmpty(finalCapture)
                     || resourceInfo.hasSubResourceMethodsOrLocators()) {
-                matchedRoots.add(MatchInfo.of(resourceInfo, pathMatcher));
+                matchedRoots.add(MatchInfo.of(resourceInfo, pathMatch));
             }
         });
 
@@ -125,15 +117,15 @@ public class RequestMatchingSpec implements RequestMatching {
         // 2.c, 2.d
         matchedResources.forEach(parentMatch -> {
             parentMatch.pathInfo.getSubResourceMethodsAndLocators().forEach(subPathInfo -> {
-                Matcher pathMatcher = resetMatcher(subPathInfo, subPath);
-                if (pathMatcher.matches()) {
+                MatchResult pathMatch = subPathInfo.match(subPath);
+                if (pathMatch != PathInfo.NO_MATCH) {
                     if (subPathInfo instanceof MethodInfo) {
-                        assert PathInfo.isEmpty(finalCapture(pathMatcher));
+                        assert PathInfo.isEmpty(finalCapture(pathMatch));
                         candidateMethods.add(MatchInfo
-                                .of((MethodInfo) subPathInfo, pathMatcher, parentMatch));
+                                .of((MethodInfo) subPathInfo, pathMatch, parentMatch));
                     } else {
                         subResourceLocators.add(MatchInfo
-                                .of((ResourceInfo) subPathInfo, pathMatcher, parentMatch));
+                                .of((ResourceInfo) subPathInfo, pathMatch, parentMatch));
                     }
                 }
             });
